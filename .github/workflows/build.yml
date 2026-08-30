@@ -45,10 +45,15 @@ jobs:
       - name: 下载Ubuntu官方ISO
         run: |
           VERSION="${{ github.event.inputs.ubuntu_version }}"
-          TYPE="${{ github.event.inputs.image_type }}"
-          URL="https://releases.ubuntu.com/${VERSION}/ubuntu-${VERSION}-${TYPE}-arm64.iso"
+          # 使用 cdimage 服务器下载 ARM64 镜像
+          URL="http://cdimage.ubuntu.com/releases/resolute/release/ubuntu-${VERSION}-desktop-arm64.iso"
+          echo "尝试下载: $URL"
           wget -O ubuntu.iso "$URL"
-          echo "✅ 下载完成: $(ls -lh ubuntu.iso)"
+          if [ ! -f ubuntu.iso ]; then
+            echo "❌ 下载失败"
+            exit 1
+          fi
+          echo "✅ 下载成功: $(ls -lh ubuntu.iso)"
 
       - name: 获取内核源码与设备树
         run: |
