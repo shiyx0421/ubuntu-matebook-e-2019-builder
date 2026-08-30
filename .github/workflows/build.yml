@@ -1,0 +1,74 @@
+name: Build Ubuntu 26.04.1 for MateBook E 2019
+
+on:
+  workflow_dispatch:
+    inputs:
+      ubuntu_version:
+        description: 'Ubuntu版本'
+        required: true
+        default: '26.04.1'
+        type: string
+      image_type:
+        description: '镜像类型'
+        required: true
+        default: 'desktop'
+        type: choice
+        options:
+          - desktop
+          - server
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      - name: 安装依赖
+        run: |
+          sudo apt update
+          sudo apt install -y \
+            gcc-aarch64-linux-gnu \
+            device-tree-compiler \
+            xorriso \
+            squashfs-tools \
+            wget \
+            cpio \
+            flex \
+            bison \
+            libssl-dev \
+            bc \
+            rsync
+
+      - name: 下载Ubuntu官方ISO
+        run: |
+          VERSION="${{ github.event.inputs.ubuntu_version }}"
+          TYPE="${{ github.event.inputs.image_type }}"
+          URL="https://releases.ubuntu.com/${VERSION}/ubuntu-${VERSION}-${TYPE}-arm64.iso"
+          wget -O ubuntu.iso "$URL"
+          echo "✅ 下载完成: $(ls -lh ubuntu.iso)"
+
+      - name: 获取内核源码与设备树
+        run: |
+          chmod +x scripts/fetch-sources.sh
+          ./scripts/fetch-sources.sh
+
+      - name: 交叉编译定制内核
+        run: |
+          chmod +x scripts/build-kernel.sh
+          ./scripts/build-kernel.sh
+
+      - name: 构建定制ISO
+        run: |
+          chmod +x scripts/build-iso.sh
+          ./scripts/build-iso.sh
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Ubuntu-MateBook-E-2019
+          path: output/
+          retention-days: 7
+          compression-level: 0
